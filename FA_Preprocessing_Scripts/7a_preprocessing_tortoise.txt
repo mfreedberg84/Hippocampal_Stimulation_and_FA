@@ -1,0 +1,113 @@
+#!/bin/tcsh -xef
+
+###### ASSUMES NO FILTERING OF BAD VOLUMES ######
+### sources original unfiltered dwi_00 folder ###
+
+#created June 8, 2018 (Catherine Cunningham)
+
+#DIFFPREP corrects distortions caused by motion, eddy currents, and B0 inhomogeneities
+#DRBUDDI performs EPI distortion correction by combining AP and PA datasets
+#final output dataset is upsampled to 1.5 isotropic for smoothing
+
+##############################
+
+set Sublist = (S01)
+
+foreach subj ($Sublist) 
+
+# setting paths for pre-preprocessed subject dti data
+set path_P_ss = /Volumes/shares/BNU/cnsraid/schintu/data_analysis/Exp2_DTI/Subjects_proc/{$subj}
+
+
+########## DIFFPREP ##########
+
+echo
+echo ////// {$subj} DIFFPREP_ap ////// 
+echo
+
+# make a directory to hold 'starter' data for DIFFPREP, as well
+# as all the files it creates
+set odir = "$path_P_ss/dwi_03_ap"
+if ( ! -e $odir ) then
+    mkdir $odir
+endif
+
+# uncompress the anatomical
+gunzip $path_P_ss/anat_01/t2w.nii.gz
+
+# for DIFFPREP command line, need row-vec and row-bval format
+1dDW_Grad_o_Mat++                                      \
+    -in_col_matT      $path_P_ss/dwi_00/ap_matT.dat    \
+    -unit_mag_out                                      \
+    -out_row_vec      $odir/ap_rvec.dat                \
+    -out_row_bval_sep $odir/ap_bval.dat
+
+# the NIFTI file must be unzipped
+3dcopy                                                 \
+    $path_P_ss/dwi_00/ap.nii.gz                        \
+    $odir/ap.nii
+
+# finally, the main command itself
+DIFFPREP                                               \
+    --dwi         $odir/ap.nii                         \
+    --bvecs       $odir/ap_rvec.dat                    \
+    --bvals       $odir/ap_bval.dat                    \
+    --structural  $path_P_ss/anat_01/t2w.nii           \
+    --phase       vertical                             \
+    --will_be_drbuddied  1                             \
+    --reg_settings TORTOISE_AFNI_bootcamp_DATA_registration_settings.dmc
+
+
+
+###### the same for the PA Direction ######
+
+echo
+echo ////// {$subj} DIFFPREP_pa //////
+echo
+
+# make a directory to hold 'starter' data for DIFFPREP, as well
+# as all the files it creates
+set odir = "$path_P_ss/dwi_03_pa"
+if ( ! -e $odir ) then
+    mkdir $odir
+endif
+
+# for DIFFPREP command line, need row-vec and row-bval format
+1dDW_Grad_o_Mat++                                      \
+    -in_col_matT      $path_P_ss/dwi_00/pa_matT.dat    \
+    -unit_mag_out                                      \
+    -out_row_vec      $odir/pa_rvec.dat                \
+    -out_row_bval_sep $odir/pa_bval.dat
+
+# the NIFTI file must be unzipped
+3dcopy                                                 \
+    $path_P_ss/dwi_00/pa.nii.gz                        \
+    $odir/pa.nii
+
+# finally, the main command itself
+DIFFPREP                                               \
+    --dwi         $odir/pa.nii                         \
+    --bvecs       $odir/pa_rvec.dat                    \
+    --bvals       $odir/pa_bval.dat                    \
+    --structural  $path_P_ss/anat_01/t2w.nii           \
+    --phase       vertical                             \
+    --will_be_drbuddied  1                             \
+    --reg_settings TORTOISE_AFNI_bootcamp_DATA_registration_settings.dmc
+
+
+
+########## DR_BUDDI ##########
+
+echo
+echo ////// {$subj} DRBUDDI ////// 
+echo
+
+DR_BUDDI_withoutGUI                                    \
+    --up_data    $path_P_ss/dwi_03_ap/ap_proc.list     \
+    --down_data  $path_P_ss/dwi_03_pa/pa_proc.list     \
+    --structural $path_P_ss/anat_01/t2w.nii            \
+    --distortion_level medium                          \
+    --res              1.5 1.5 1.5                     \
+    --output           $path_P_ss/dwi_04/buddi.list
+
+end #subj

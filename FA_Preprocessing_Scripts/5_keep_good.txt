@@ -1,0 +1,33 @@
+#!/bin/tcsh -xef
+
+#created June 2018 (Catherine Cunningham)
+
+# requires list of bad volumes created from ‘select_bad’ script
+# creates new diffusion files, now free of bad volumes
+
+set path_P_ss = /Volumes/shares/BNU/cnsraid/schintu/data_analysis/Exp2_DTI/Subjects_proc/S01
+
+# the string of *good* volumes after selecting *bads*
+set selstr = `cat $path_P_ss/dwi_01/dwi_sel_both_goods.txt`
+
+# filter from both AP and PA dwi sets, both vols and b-matrices
+
+echo
+echo ////// filter ap //////
+echo
+
+fat_proc_filter_dwis                                 \
+    -in_dwi        $path_P_ss/dwi_00/ap.nii.gz       \
+    -in_col_matT   $path_P_ss/dwi_00/ap_matT.dat     \
+    -select        "$selstr"                         \
+    -prefix        $path_P_ss/dwi_02/ap
+
+echo
+echo ////// filter pa //////
+echo
+
+fat_proc_filter_dwis                                 \
+    -in_dwi        $path_P_ss/dwi_00/pa.nii.gz       \
+    -in_col_matT   $path_P_ss/dwi_00/pa_matT.dat     \
+    -select        "$selstr"                         \
+    -prefix        $path_P_ss/dwi_02/pa

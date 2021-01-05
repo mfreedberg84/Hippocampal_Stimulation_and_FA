@@ -1,0 +1,27 @@
+#!/bin/tcsh -xef
+
+#created August 2018 (Catherine Cunningham)
+
+# brings freesurfer parcellations into dwi space
+# function can also be used to map other types of data
+
+set Sublist = (S01)
+
+foreach subj ($Sublist)
+
+set path_P_ss = /Volumes/shares/BNU/cnsraid/schintu/data_analysis/Exp2_DTI/Subjects_proc/{$subj}
+
+echo
+echo ////// {$subj} map suma to dwi //////
+echo
+
+fat_proc_map_to_dti                                                \
+    -source          $path_P_ss/anat_02/SUMA/brain.nii             \
+    -followers_NN    $path_P_ss/anat_02/SUMA/aparc*_REN_*.nii.gz   \
+    -followers_surf  $path_P_ss/anat_02/SUMA/std.141.*.gii         \
+    -followers_ndset $path_P_ss/anat_02/SUMA/std.141.*.niml.dset   \
+    -followers_spec  $path_P_ss/anat_02/SUMA/std.141.*.spec        \
+    -base            $path_P_ss/dwi_05/dwi_dwi.nii.gz'[0]'         \
+    -prefix          $path_P_ss/dwi_05/indt
+
+end #subj
